@@ -59,5 +59,25 @@ pub fn main() !void {
         total_distance += distance;
     }
 
-    std.debug.print("{d}", .{total_distance});
+    std.debug.print("Total distance: {d}\n", .{total_distance});
+
+    var similarity_score: u32 = 0;
+
+    for (list1.items) |number| {
+        const number_unsigned: u32 = @intCast(number);
+        similarity_score += number_unsigned * count(number, list2.items);
+    }
+    std.debug.print("Similarity score: {d}\n", .{similarity_score});
+}
+
+fn count(number: i32, list: []i32) u32 {
+    var counter: u32 = 0;
+    for (list) |item| {
+        if (item == number) {
+            counter += 1;
+        }
+    }
+
+    return counter;
+
 }
