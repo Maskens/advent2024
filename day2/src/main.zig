@@ -87,12 +87,6 @@ fn getDirection(distance: i32) Direction {
     return Direction.decreasing;
 }
 
-fn getDistance(n1: i32, n2: i32) u32 {
-    return @abs(n1 - n2);
-}
-
-const Result = struct { safe: bool, error_index: ?u8 };
-
 fn isSafe(numbers: []u32) bool {
     var cur_direction: Direction = Direction.noop;
     var i: u8 = 0;
