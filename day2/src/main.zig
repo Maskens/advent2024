@@ -3,6 +3,11 @@ const std = @import("std");
 const Direction = enum { noop, same, increasing, decreasing };
 
 pub fn main() !void {
+    const safetyDamper = true;
+    try day1(safetyDamper);
+}
+
+fn day1(safetyDamper: bool) !void {
     const content = try readFile("real_input.txt", std.heap.page_allocator);
 
     var lines = std.mem.splitSequence(u8, content, "\n");
@@ -17,22 +22,45 @@ pub fn main() !void {
 
         if (numberList.items.len == 0) break;
 
-        std.debug.print("Testing numbers: ", .{});
-        for (numberList.items) |item| {
-            std.debug.print("{d} ", .{item});
-        }
+        printList(&numberList);
 
-        if (isSafe(numberList.items)) {
+        const safe = isSafe(numberList.items);
+
+        if (safe) {
             std.debug.print(" Safe!", .{});
             noOfSafe += 1;
         } else {
             std.debug.print(" Not safe!", .{});
+
+            if (safetyDamper) {
+                std.debug.print(" Using safetyDamper...", .{});
+
+                const numbers_len = numberList.items.len;
+
+                for (0..numbers_len) |i| {
+                    var new_list = try numberList.clone();
+                    defer new_list.deinit();
+                    _ = new_list.orderedRemove(i);
+                    if (isSafe(new_list.items)) {
+                        noOfSafe += 1;
+                        std.debug.print("Saved by removing item at '{d}', New list: ", .{i});
+                        printList(&new_list);
+                        break;
+                    }
+                }
+            }
         }
 
         std.debug.print("\n", .{});
     }
 
     std.debug.print("{d}", .{noOfSafe});
+}
+
+fn printList(arrayList: *std.ArrayList(u32)) void {
+    for (arrayList.items) |item| {
+        std.debug.print("{d} ", .{item});
+    }
 }
 
 fn getNumberSeries(string_numbers: []const u8, numbers: *std.ArrayList(u32)) !void {
@@ -47,12 +75,12 @@ fn getNumberSeries(string_numbers: []const u8, numbers: *std.ArrayList(u32)) !vo
     }
 }
 
-fn getDirection(n1: u32, n2: u32) Direction {
-    if (n1 == n2) {
+fn getDirection(distance: i32) Direction {
+    if (distance == 0) {
         return Direction.same;
     }
 
-    if (n1 < n2) {
+    if (distance > 0) {
         return Direction.increasing;
     }
 
@@ -63,35 +91,33 @@ fn getDistance(n1: i32, n2: i32) u32 {
     return @abs(n1 - n2);
 }
 
+const Result = struct { safe: bool, error_index: ?u8 };
+
 fn isSafe(numbers: []u32) bool {
-    var cur_distance: i32 = 0;
-    for (numbers, 0..) |number, i| {
-        if (i + 1 == numbers.len) {
+    var cur_direction: Direction = Direction.noop;
+    var i: u8 = 0;
+    while (i < numbers.len) : (i += 1) {
+        if (i + 1 >= numbers.len) {
             break;
         }
 
         const num1: i32 = @intCast(numbers[i]);
         const num2: i32 = @intCast(numbers[i + 1]);
-        std.debug.print("{d},{d}", .{ num1, num2 });
 
         const distance: i32 = num1 - num2;
 
-        if (distance == 0 or @abs(distance) > 3) return false;
+        if (distance == 0 or @abs(distance) > 3) {
+            return false;
+        }
 
-        if (i == 0) {
-            cur_distance = distance;
+        if (cur_direction == Direction.noop) {
+            cur_direction = getDirection(distance);
             continue;
         }
 
-        if (distance > 0 and cur_distance < 0) {
+        if (getDirection(distance) != cur_direction) {
             return false;
         }
-
-        if (distance < 0 and cur_distance > 0) {
-            return false;
-        }
-
-        std.debug.print("{d} ", .{number});
     }
 
     return true;
