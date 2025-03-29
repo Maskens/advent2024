@@ -1,46 +1,204 @@
-//! By convention, main.zig is where your main function lives in the case that
-//! you are building an executable. If you are making a library, the convention
-//! is to delete this file and start with root.zig instead.
+const std = @import("std");
+
+const State = enum { detect_prefix, read_first_number, read_second_number };
+
+const ParseNumberState = enum { reading, err, done };
+
+const ParseNumber = struct {
+    index: u8 = 0,
+    limit: u8 = 3,
+    numberChars: [3]u8 = [_]u8{ 'x', 'x', 'x' },
+    limit_char: u8,
+    state: ParseNumberState = ParseNumberState.reading,
+
+    fn tryReadDigit(self: *ParseNumber, d: u8) ParseNumberState {
+        if (!std.ascii.isDigit(d) and (d != self.limit_char)) {
+            return ParseNumberState.err;
+        }
+
+        if (d == self.limit_char and self.index > 0) {
+            return ParseNumberState.done;
+        }
+
+        // Read number
+        if (self.index > self.numberChars.len - 1) {
+            return ParseNumberState.err;
+        }
+
+        self.numberChars[self.index] = d;
+        self.index += 1;
+
+        return ParseNumberState.reading;
+    }
+
+    fn getNumber(self: *ParseNumber) u32 {
+        const number = self.numberChars[0..self.index];
+        return std.fmt.parseInt(u32, number, 10) catch unreachable;
+    }
+};
 
 pub fn main() !void {
-    // Prints to stderr (it's a shortcut based on `std.io.getStdErr()`)
-    std.debug.print("All your {s} are belong to us.\n", .{"codebase"});
+    const input_str = try std.fs.cwd().readFileAlloc(
+        std.heap.page_allocator,
+        "real_input.txt",
+        99999,
+    );
+    std.debug.print("{s}", .{input_str});
 
-    // stdout is for the actual output of your application, for example if you
-    // are implementing gzip, then only the compressed bytes should be sent to
-    // stdout, not any debugging messages.
-    const stdout_file = std.io.getStdOut().writer();
-    var bw = std.io.bufferedWriter(stdout_file);
-    const stdout = bw.writer();
+    const prefix: []const u8 = "mul(";
+    var prefix_state_index: u8 = 0;
 
-    try stdout.print("Run `zig build test` to run the tests.\n", .{});
+    var cur_state = State.detect_prefix;
+    var parseNumber = ParseNumber{ .limit_char = ',' };
 
-    try bw.flush(); // Don't forget to flush!
+    var first_number: u32 = 0;
+    var second_number: u32 = 0;
+
+    var total: u32 = 0;
+
+    for (input_str) |char| {
+        switch (cur_state) {
+            .detect_prefix => {
+                if (prefix[prefix_state_index] == char) {
+                    // std.debug.print("{c}", .{char});
+                    prefix_state_index += 1;
+
+                    if (prefix_state_index == prefix.len) {
+                        cur_state = State.read_first_number;
+                        parseNumber = ParseNumber{ .limit_char = ',' };
+                        prefix_state_index = 0;
+                    }
+                } else prefix_state_index = 0;
+            },
+            .read_first_number => {
+                const result = parseNumber.tryReadDigit(char);
+
+                if (result == ParseNumberState.reading) {
+                    continue;
+                }
+
+                if (result == ParseNumberState.done) {
+                    cur_state = State.read_second_number;
+                    first_number = parseNumber.getNumber();
+                    parseNumber = ParseNumber{ .limit_char = ')' };
+                }
+
+                if (result == ParseNumberState.err) {
+                    prefix_state_index = 0;
+                    cur_state = State.detect_prefix;
+                }
+            },
+            .read_second_number => {
+                const result = parseNumber.tryReadDigit(char);
+
+                if (result == ParseNumberState.reading) {
+                    continue;
+                }
+
+                if (result == ParseNumberState.done) {
+                    second_number = parseNumber.getNumber();
+                    total += first_number * second_number;
+                    cur_state = State.detect_prefix;
+                    prefix_state_index = 0;
+                }
+
+                if (result == ParseNumberState.err) {
+                    cur_state = State.detect_prefix;
+                    prefix_state_index = 0;
+                }
+            },
+        }
+    }
+
+    std.debug.print("Done, number is {d}\n", .{total});
 }
 
 test "simple test" {
-    var list = std.ArrayList(i32).init(std.testing.allocator);
-    defer list.deinit(); // Try commenting this out and see if zig detects the memory leak!
-    try list.append(42);
-    try std.testing.expectEqual(@as(i32, 42), list.pop());
-}
+    const input = "134,";
+    var parseNumber = ParseNumber{ .limit_char = ',' };
 
-test "use other module" {
-    try std.testing.expectEqual(@as(i32, 150), lib.add(100, 50));
-}
+    var result: ParseNumberState = undefined;
 
-test "fuzz example" {
-    const Context = struct {
-        fn testOne(context: @This(), input: []const u8) anyerror!void {
-            _ = context;
-            // Try passing `--fuzz` to `zig build test` and see if it manages to fail this test case!
-            try std.testing.expect(!std.mem.eql(u8, "canyoufindme", input));
+    for (input) |char| {
+        result = parseNumber.tryReadDigit(char);
+
+        if (result == ParseNumberState.err or result == ParseNumberState.done) {
+            break;
         }
-    };
-    try std.testing.fuzz(Context{}, Context.testOne, .{});
+    }
+
+    const number = parseNumber.getNumber();
+
+    try std.testing.expectEqual(result, ParseNumberState.done);
+    try std.testing.expectEqual(number, 134);
 }
 
-const std = @import("std");
+test "2" {
+    const input = "x3,";
+    var parseNumber = ParseNumber{ .limit_char = ',' };
 
-/// This imports the separate module containing `root.zig`. Take a look in `build.zig` for details.
-const lib = @import("day3_lib");
+    var result: ParseNumberState = undefined;
+
+    for (input) |char| {
+        result = parseNumber.tryReadDigit(char);
+
+        if (result == ParseNumberState.err or result == ParseNumberState.done) {
+            break;
+        }
+    }
+
+    try std.testing.expectEqual(result, ParseNumberState.err);
+}
+
+test "3" {
+    const input = "3,";
+    var parseNumber = ParseNumber{ .limit_char = ',' };
+
+    var result: ParseNumberState = undefined;
+
+    for (input) |char| {
+        result = parseNumber.tryReadDigit(char);
+
+        if (result == ParseNumberState.err or result == ParseNumberState.done) {
+            break;
+        }
+    }
+
+    const number = parseNumber.getNumber();
+    try std.testing.expectEqual(result, ParseNumberState.done);
+    try std.testing.expectEqual(number, 3);
+}
+
+test "4" {
+    const input = "3123,";
+    var parseNumber = ParseNumber{ .limit_char = ',' };
+
+    var result: ParseNumberState = undefined;
+
+    for (input) |char| {
+        result = parseNumber.tryReadDigit(char);
+
+        if (result == ParseNumberState.err or result == ParseNumberState.done) {
+            break;
+        }
+    }
+
+    try std.testing.expectEqual(result, ParseNumberState.err);
+}
+
+test "5" {
+    const input = "3123";
+    var parseNumber = ParseNumber{ .limit_char = ',' };
+
+    var result: ParseNumberState = undefined;
+
+    for (input) |char| {
+        result = parseNumber.tryReadDigit(char);
+
+        if (result == ParseNumberState.err or result == ParseNumberState.done) {
+            break;
+        }
+    }
+
+    try std.testing.expectEqual(result, ParseNumberState.err);
+}
