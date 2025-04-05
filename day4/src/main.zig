@@ -1,20 +1,22 @@
 const std = @import("std");
 const map = @import("map.zig");
 
-const WIDTH: u32 = 10;
-const HEIGHT: u32 = 10;
+// const WIDTH: u32 = 10;
+// const HEIGHT: u32 = 10;
+const WIDTH: u32 = 140;
+const HEIGHT: u32 = 140;
 const word = "XMAS";
 
 pub fn main() !void {
     var buf = [_]u8{0} ** ((WIDTH + 1) * HEIGHT);
 
-    _ = try std.fs.cwd().readFile("input_test.txt", &buf);
+    _ = try std.fs.cwd().readFile("real_input.txt", &buf);
 
     const array: [WIDTH * HEIGHT]u8 = .{0} ** (WIDTH * HEIGHT);
 
     var m = map.Map{
-        .width = 10,
-        .height = 10,
+        .width = 140,
+        .height = 140,
         .map = array,
     };
 

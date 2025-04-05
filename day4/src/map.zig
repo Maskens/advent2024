@@ -2,8 +2,8 @@ pub const MapError = error{NotFound};
 
 const std = @import("std");
 
-const WIDTH: u32 = 10;
-const HEIGHT: u32 = 10;
+const WIDTH: u32 = 140;
+const HEIGHT: u32 = 140;
 
 pub const Dir = struct {
     x: i32,
