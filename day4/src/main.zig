@@ -20,23 +20,107 @@ pub fn main() !void {
 
     m.loadData(&buf);
 
+    var found_counter: u32 = 0;
+
     for (0..HEIGHT) |y| {
         for (0..WIDTH) |x| {
-            // const c = try map.getChar(@intCast(x), @intCast(y));
-            // std.debug.print("{c}", .{c});
-            // Test for word
-            const found = m.findWord(
+
+            // RIGHT
+            if (m.findWord(
                 word,
                 @intCast(x),
                 @intCast(y),
                 map.Dir{ .x = 1, .y = 0 },
-            );
+            )) {
+                std.debug.print("Found word at {d}, {d}!\n", .{ x, y });
+                found_counter += 1;
+            }
 
-            if (found) {
-                std.debug.print("Found!", .{});
+            // LEFT
+            if (m.findWord(
+                word,
+                @intCast(x),
+                @intCast(y),
+                map.Dir{ .x = -1, .y = 0 },
+            )) {
+                std.debug.print("Found word at {d}, {d}!\n", .{ x, y });
+                found_counter += 1;
+            }
+
+            // DOWN
+            if (m.findWord(
+                word,
+                @intCast(x),
+                @intCast(y),
+                map.Dir{ .x = 0, .y = 1 },
+            )) {
+                std.debug.print("Found word at {d}, {d}!\n", .{ x, y });
+                found_counter += 1;
+            }
+
+            // UP
+            if (m.findWord(
+                word,
+                @intCast(x),
+                @intCast(y),
+                map.Dir{ .x = 0, .y = -1 },
+            )) {
+                std.debug.print("Found word at {d}, {d}!\n", .{ x, y });
+                found_counter += 1;
+            }
+
+            // UP RIGHT
+            if (m.findWord(
+                word,
+                @intCast(x),
+                @intCast(y),
+                map.Dir{ .x = 1, .y = -1 },
+            )) {
+                std.debug.print("Found word at {d}, {d}!\n", .{ x, y });
+                found_counter += 1;
+            }
+
+            // UP LEFT
+            if (m.findWord(
+                word,
+                @intCast(x),
+                @intCast(y),
+                map.Dir{ .x = -1, .y = -1 },
+            )) {
+                std.debug.print("Found word at {d}, {d}!\n", .{ x, y });
+                found_counter += 1;
+            }
+
+            // DOWN LEFT
+            if (m.findWord(
+                word,
+                @intCast(x),
+                @intCast(y),
+                map.Dir{ .x = -1, .y = 1 },
+            )) {
+                std.debug.print("Found word at {d}, {d}!\n", .{ x, y });
+                found_counter += 1;
+            }
+
+            // DOWN RIGHT
+            if (m.findWord(
+                word,
+                @intCast(x),
+                @intCast(y),
+                map.Dir{ .x = 1, .y = 1 },
+            )) {
+                std.debug.print("Found word at {d}, {d}!\n", .{ x, y });
+                found_counter += 1;
             }
         }
     }
+
+    // std.debug.print("{c}", .{try m.getChar(4, 1)});
+    // std.debug.print("{c}", .{try m.getChar(3, 1)});
+    // std.debug.print("{c}", .{try m.getChar(2, 1)});
+    // std.debug.print("{c}", .{try m.getChar(1, 1)});
+
+    std.debug.print("Found {d} number of words!", .{found_counter});
 }
 
 // test "simple test" {

@@ -49,13 +49,30 @@ pub const Map = struct {
     }
 
     pub fn findWord(
-        _: *Map,
+        self: *Map,
         word: []const u8,
-        x: u32,
-        y: u32,
-        _: Dir,
+        x: i32,
+        y: i32,
+        dir: Dir,
     ) bool {
-        std.debug.print("{s}, {d}, {d}", .{ word, x, y });
+        // std.debug.print("{s}, {d}, {d}", .{ word, x, y });
+
+        var cur_x = x;
+        var cur_y = y;
+
+        for (0..word.len) |i| {
+            const char = word[i];
+
+            const map_char = self.getChar(cur_x, cur_y) catch return false;
+
+            if (char != map_char) {
+                return false;
+            }
+
+            cur_x += dir.x;
+            cur_y += dir.y;
+        }
+
         return true;
     }
 };
